@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # Servicio para la base de datos MongoDB
+  mongodb:
+    image: mongo:6
+    container_name: mongodb
+    ports:
+      - "27017:27017"      # Exponer MongoDB en el puerto 27017
+    volumes:
+      - mongodb_data:/data/db  # Persistencia de los datos
+
+  # Servicio para el backend
+  backend:
+    build: ./backend
+    container_name: backend
+    ports:
+      - "5010:5010"        # Exponer el backend en el puerto 5010
+    depends_on:
+      - mongodb            # El backend depende de MongoDB
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017/tasksDB
+    volumes:
+      - ./backend:/usr/src/app    # Montar el código local en el contenedor
+      - /usr/src/app/node_modules # Evitar que node_modules se sobrescriba
+    command: npm run dev          # Usar un comando de desarrollo (ej. nodemon)
+
+  # Servicio para el frontend
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"        # Exponer el frontend en el puerto 3000
+    depends_on:
+      - backend            # El frontend depende del backend
+    volumes:
+      - ./frontend:/usr/src/app    # Montar el código local en el contenedor
+      - /usr/src/app/node_modules  # Evitar que node_modules se sobrescriba
+    command: npm start            # Usar el comando de desarrollo
+
+volumes:
+  mongodb_data:             # Volumen para persistencia de MongoDB
