@@ -23,7 +23,7 @@ services:
     volumes:
       - ./backend:/usr/src/app    # Montar el código local en el contenedor
       - /usr/src/app/node_modules # Evitar que node_modules se sobrescriba
-    command: npm run dev          # Usar un comando de desarrollo (ej. nodemon)
+    command: npx nodemon server.js  # Usar un comando de desarrollo en docker
 
   # Servicio para el frontend
   frontend:
@@ -36,7 +36,10 @@ services:
     volumes:
       - ./frontend:/usr/src/app    # Montar el código local en el contenedor
       - /usr/src/app/node_modules  # Evitar que node_modules se sobrescriba
-    command: npm start            # Usar el comando de desarrollo
+    environment:
+      - CHOKIDAR_USEPOLLING=true   # Permitir hot-reload en Docker
+      - WATCHPACK_POLLING=true
+    command: npm start             # Usar el comando de desarrollo
 
 volumes:
   mongodb_data:             # Volumen para persistencia de MongoDB
