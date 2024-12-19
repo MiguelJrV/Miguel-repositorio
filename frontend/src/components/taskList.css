@@ -18,7 +18,9 @@
   
   .tasks-container {
     display: flex;
-    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center; 
   }
   
   .task-section {
@@ -26,7 +28,25 @@
     border: 1px solid #ddd;
     border-radius: 8px;
     padding: 15px;
-    width: 30%;
+    width: 100%;
+    max-width: 300px; 
+    margin: 10px;
+    flex: 1 1 auto; 
+  }
+  
+  .task-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .task-title {
+    font-weight: bold;
+  }
+  
+  .task-description {
+    font-size: 0.9em;
+    color: #666;
   }
   
   .task-section h2 {
@@ -97,9 +117,16 @@
     opacity: 0.9;
   }
 
-  .task-section {
+.task-section {
   margin: 20px 0;
 }
+
+.task-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 
 .task-section h2 {
   font-size: 1.5em;
@@ -168,7 +195,7 @@
     color: #777;
     text-align: center;
     margin-top: 10px;
-  }
+}
   
 
   

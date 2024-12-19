@@ -16,6 +16,19 @@ const TaskList = () => {
   // Obtener tareas del backend
   useEffect(() => {
     fetchTasks();
+    const interval = setInterval(() => {
+      setTasks((currentTasks) =>
+        currentTasks.map((task) => {
+          // Reevaluar la categoría de la tarea en tiempo real
+          return {
+            ...task,
+            category: categorizeTasks(task),
+          };
+        })
+      );
+    }, 5000); // Actualización cada segundo
+  
+    return () => clearInterval(interval); 
   }, []);
 
   const fetchTasks = async () => {
@@ -60,7 +73,7 @@ const TaskList = () => {
   };
 
   const deleteAllTasksInSection = async (status) => {
-    const tasksToDelete = tasks.filter((task) => categorizeTasks(task) === status);
+    const tasksToDelete = tasks.filter((task) => task.category === status);
     for (const task of tasksToDelete) {
       await deleteTask(task._id);
     }
@@ -69,17 +82,17 @@ const TaskList = () => {
   const categorizeTasks = (task) => {
     const now = new Date();
     const taskDueDate = new Date(task.dueDate);
+  
+    // Si está completada, se clasifica como completada
     if (task.status === 'completed') return 'completed';
-    if (taskDueDate < now && task.status !== 'completed') return 'expired';
+  
+    // Si la fecha actual supera la fecha y hora de la tarea, se clasifica como expirada
+    if (taskDueDate <= now) return 'expired';
+  
+    // Si no cumple con ninguna de las anteriores, está pendiente
     return 'pending';
   };
-
-  // Función para formatear la fecha y hora en 12H
-  const formatDateTo12H = (date) => {
-    const options = { hour: 'numeric', minute: '2-digit', hour12: true };
-    return new Date(date).toLocaleString('es-ES', options); // AM/PM en español
-  };
-
+  
 
   const filteredTasks = tasks.filter((task) => {
     const taskDate = new Date(task.dueDate).toDateString();
@@ -90,45 +103,73 @@ const TaskList = () => {
   return (
     <div className="task-manager">
       <h1>Gestor de Tareas</h1>
+  
+      {/* Contenedor del calendario */}
       <div className="calendar-container">
         <Calendar onChange={setSelectedDate} value={selectedDate} />
       </div>
-
+  
+      {/* Contenedor de las tareas */}
       <div className="tasks-container">
         {['pending', 'completed'].map((status) => {
           const tasksToShow = filteredTasks.filter(
-            (task) => categorizeTasks(task) === status
+            (task) => task.category === status
           );
-
+  
           return (
             <div key={status} className="task-section">
-              <h2>
-                {status === 'pending' && 'Pendientes'}
-                {status === 'completed' && 'Completadas'}
-              </h2>
-
+              {/* Encabezado de cada sección */}
+              <div className="task-section-header">
+                <h2>
+                  {status === 'pending' && 'Pendientes'}
+                  {status === 'completed' && 'Completadas'}
+                </h2>
+                {tasksToShow.length > 0 && (
+                  <button
+                    className="delete-all-btn"
+                    onClick={() => deleteAllTasksInSection(status)}
+                  >
+                    Eliminar todas
+                  </button>
+                )}
+              </div>
+  
+              {/* Lista de tareas */}
               {tasksToShow.length === 0 ? (
-                <p className="no-tasks-message">No se encontraron datos para la fecha seleccionada</p>
+                <p className="no-tasks-message">
+                  No se encontraron datos para la fecha seleccionada
+                </p>
               ) : (
                 <ul>
                   {tasksToShow.map((task) => (
                     <li key={task._id}>
-                      <span>{task.title} - {new Date(task.dueDate).toLocaleString()}</span>
-                      <div>
-                        {status === 'pending' && (
-                          <button
-                            className="complete-btn"
-                            onClick={() => markAsCompleted(task._id)}
-                          >
-                            Completar
-                          </button>
+                      <div className="task-item">
+                        <span className="task-title">
+                          {task.title} - {new Date(task.dueDate).toLocaleString()}
+                        </span>
+                        {task.description && (
+                          <p className="task-description">
+                            {task.description.length > 50
+                              ? `${task.description.slice(0, 50)}...`
+                              : task.description}
+                          </p>
                         )}
-                        <button
-                          className="delete-btn"
-                          onClick={() => deleteTask(task._id)}
-                        >
-                          Eliminar
-                        </button>
+                        <div>
+                          {status === 'pending' && (
+                            <button
+                              className="complete-btn"
+                              onClick={() => markAsCompleted(task._id)}
+                            >
+                              Completar 
+                            </button>
+                          )}
+                          <button
+                            className="delete-btn"
+                            onClick={() => deleteTask(task._id)}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </div>
                     </li>
                   ))}
@@ -137,23 +178,36 @@ const TaskList = () => {
             </div>
           );
         })}
-
-        {/* Tareas expiradas siempre visibles */}
+  
+        {/* Sección de tareas expiradas */}
         <div className="task-section">
-          <h2>Expiradas</h2>
-          {tasks.filter((task) => categorizeTasks(task) === 'expired').length === 0 ? (
-            <p className="no-tasks-message">No hay tareas expiradas hasta el momento.</p>
+          <div className="task-section-header">
+            <h2>Expiradas</h2>
+            {tasks.filter((task) => task.category === 'expired').length > 0 && (
+              <button
+                className="delete-all-btn"
+                onClick={() => deleteAllTasksInSection('expired')}
+              >
+                Eliminar todas
+              </button>
+            )}
+          </div>
+  
+          {/* Lista de tareas expiradas */}
+          {tasks.filter((task) => task.category === 'expired').length === 0 ? (
+            <p className="no-tasks-message">
+              No hay tareas expiradas hasta el momento.
+            </p>
           ) : (
             <ul>
               {tasks
-                .filter((task) => categorizeTasks(task) === 'expired')
+                .filter((task) => task.category === 'expired')
                 .map((task) => (
                   <li key={task._id} className="expired">
-                    {/* Solo el texto de la tarea se tachará */}
                     <span className="expired-text">
                       {task.title} - {new Date(task.dueDate).toLocaleString()}
+                    
                     </span>
-                    {/* Botón de eliminar que no se ve afectado */}
                     <button
                       className="delete-btn"
                       onClick={() => deleteTask(task._id)}
@@ -166,7 +220,8 @@ const TaskList = () => {
           )}
         </div>
       </div>
-
+  
+      {/* Contenedor para agregar tareas */}
       <div className="add-task">
         <h2>Agregar Tarea</h2>
         <input
@@ -176,29 +231,40 @@ const TaskList = () => {
           onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
         />
         <textarea
-          placeholder="Descripción"
+          placeholder="Descripción (opcional)"
           value={newTask.description}
           onChange={(e) =>
             setNewTask({ ...newTask, description: e.target.value })
           }
         />
-        <div className="datetime-input">
-          <label>Fecha:</label>
+        <div
+          className="datetime-input"
+          onClick={() => document.getElementById("datetime-picker").showPicker()}
+          style={{
+            cursor: "pointer",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <label>Fecha y Hora:</label>
           <input
-            type="date"
-            value={newTask.dueDate.toISOString().split('T')[0]} // Solo fecha
-            onChange={(e) =>
-              setNewTask({ ...newTask, dueDate: new Date(`${e.target.value}T${newTask.dueDate.toISOString().split('T')[1]}`) })
+            id="datetime-picker"
+            type="datetime-local"
+            value={
+              newTask.dueDate
+                ? `${newTask.dueDate.toISOString().split("T")[0]}T${newTask.dueDate
+                    .toTimeString()
+                    .slice(0, 5)}`
+                : ""
             }
-          />
-
-          <label>Hora (Formato de 24h):</label>
-          <input
-            type="time"
-            value={newTask.dueDate.toISOString().split('T')[1].slice(0, 5)} // Solo hora
-            onChange={(e) =>
-              setNewTask({ ...newTask, dueDate: new Date(`${newTask.dueDate.toISOString().split('T')[0]}T${e.target.value}`) })
-            }
+            onChange={(e) => {
+              const [date, time] = e.target.value.split("T");
+              setNewTask({
+                ...newTask,
+                dueDate: new Date(`${date}T${time}`),
+              });
+            }}
+            min={new Date().toISOString().slice(0, 16)}
           />
         </div>
         <button onClick={addTask} className="add-btn">
@@ -208,5 +274,4 @@ const TaskList = () => {
     </div>
   );
 };
-
 export default TaskList;
